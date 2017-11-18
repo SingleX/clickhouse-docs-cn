@@ -1,0 +1,42 @@
+{
+    "title": "ClickHouse 中文文档",
+    "description": "ClickHouse 中文文档",
+    "author": "SingleX",
+    "output.name": "site",
+    "language": "zh-hans",
+    "gitbook": "3.2.3",
+    "root": ".",
+    "structure": {
+        "readme": "introduction.md"
+    },
+    "links": {
+        "sidebar": {
+            "Home": "http://www.singlex.net"
+        }
+    },
+    "plugins": [
+        "lunr",
+        "search",
+        "livereload",
+        "simple-page-toc@^0.1.1",
+        "anchors@^0.7.1",
+        "include-codeblock@^3.0.2",
+        "splitter@^0.0.8",
+        "expandable-chapters-small@^0.1.7",
+        "anchor-navigation-ex@0.1.8"
+    ],
+    "pluginsConfig": {
+        "theme-default": {
+            "showLevel": true
+        },
+        "include-codeblock": {
+            "template": "ace",
+            "unindent": true,
+            "edit": true
+        },
+        "simple-page-toc": {
+            "maxDepth": 5,
+            "skipFirstH1": true
+        }
+    }
+}
