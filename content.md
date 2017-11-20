@@ -24,7 +24,7 @@ GoodEvent:  1       1       1       1       1       1       1       1       1   
 EventTime:  2016-05-18 05:19:20     2016-05-18 08:10:20     2016-05-18 07:38:00     2016-05-18 01:13:08     2016-05-18 00:04:06     2016-05-18 04:21:30     2016-05-18 00:34:16     2016-05-18 07:35:49     2016-05-18 11:41:59     2016-05-18 01:13:32
 ```
 
-这些例子仅展示了数据的排列顺序。不同列的值被分开存储，同一列的值被存储在一起。面向行的数据库管理系统举例有：`Vertica`,`Paraccel（Actian Matrix）（Amazon Redshift）`,`Sybase IQ`,`Exasol`,`Infobright`,`InfiniDB`,`MonetDB（VectorWise）（Actian Vector）`,`LucidDB`,`SAP HANA`,`Google Dremel`,`Google PowerDrill`,`Druid`,`kdb+` 等。
+这些例子仅展示了数据的排列顺序。不同列的值被分开存储，同一列的值被存储在一起。面向行的数据库管理系统举例有： Vertica，Paraccel（Actian Matrix）（Amazon Redshift），SybaseIQ，Exasol，Infobright，InfiniDB，MonetDB（VectorWise）（Actian Vector），LucidDB，SAP HANA，Google Dremel，Google PowerDrill，Druid，kdb+ 等。
 
 存储数据的不同顺序更好的适用于不同的场景。数据获取场景涉及到产生了什么样的查询，频率和占比情况；每种类型的查询要读取多少数据——行数，列数和字节数；读取和更新数据的关系；工作数据的大小和本地使用情况；是否使用了事务，以及它们是如何隔离的；对数据复制和逻辑完整性的要求；对每种查询的延迟和吞吐量的要求等等。
 
@@ -53,7 +53,7 @@ EventTime:  2016-05-18 05:19:20     2016-05-18 08:10:20     2016-05-18 07:38:00 
 1. 为了 I/O
 2. 对一个分析查询，仅有很小数量的表的列需要读取。在一个列式数据库中，你可以仅读取需要的数据。例如，如果你需要 100 列中的 5 列，你可以预期 I/O 能减少20倍
 3. 既然数据是按 packets 读取的，因此容易压缩。列式的数据也容易压缩。这进一步减少了 I/O 量
-4. Due to the reduced I/O, more data fits in the system cache.由于减少了 I/O，可以有更多的数据适合在系统缓存中
+4. 由于减少了 I/O，可以有更多的数据适合在系统缓存中
 
 例如，查询“每个广告平台的记录的条数”需要读取一个“广告平台ID”的列，这会占用 1 个未压缩的字节。如果大多数流量不是来自广告平台，那么你可以期望此列至少有10倍的压缩。当使用快速压缩算法时，数据解压缩速度可以达到每秒至少几千兆字节的未压缩数据。换句话说，这个查询可以在一台服务器上以每秒大约几十亿行的速度处理。这个速度实际上是在实践中实现的。
 
@@ -103,9 +103,11 @@ LIMIT 20
 :)
 ```
 
-2. CPU 方面
+1. CPU 方面
 
 Since executing a query requires processing a large number of rows, it helps to dispatch all operations for entire vectors instead of for separate rows, or to implement the query engine so that there is almost no dispatching cost. If you don’t do this, with any half-decent disk subsystem, the query interpreter inevitably stalls the CPU. It makes sense to both store data in columns and process it, when possible, by columns.
+
+既然执行一次查询需要处理大量的行，它有助于调度整个向量的所有操作，而不是单独的行，或者实现查询引擎那样就几乎没有调度成本了。
 
 There are two ways to do this:
 
