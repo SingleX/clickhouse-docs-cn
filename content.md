@@ -170,7 +170,7 @@ ClickHouse 支持主键（primary key）表。为了快速执行对主键范围�
 
 2. 支持基于数据的一部分（样本）运行查询并获得近似结果。在这种情况下，从磁盘检索的数据比例较少。
 
-3.  支持为有限数量的随机 key（而不是所有 key）运行聚合。在数据 key 分发的一定条件下，这将提供一个相当准确的结果，同时使用较少的资源。
+3. 支持为有限数量的随机 key（而不是所有 key）运行聚合。在数据 key 分发的一定条件下，这将提供一个相当准确的结果，同时使用较少的资源。
 
 #### 数据复制和支持副本上的数据完整性
 
@@ -179,9 +179,8 @@ ClickHouse 支持主键（primary key）表。为了快速执行对主键范围�
 ### ClickHouse 中可能被认为是缺点的特性
 
 1. 没有事务
-2. 对于聚合，查询结果的大小必须适合于单个服务器上的RAM。但是，查询的源数据量可能无限大。
-
-3. 缺乏完整的 `UPDATE` / `DELETE` 实现。
+2. 对于聚合，查询结果的大小必须适合于单个服务器上的RAM。但是，查询的源数据量可能无限大
+3. 缺乏完整的 `UPDATE` / `DELETE` 实现
 
 ### Yandex.Metrica 的任务
 
@@ -205,7 +204,7 @@ ClickHouse 在其他 Yandex 服务中至少有十几次的安装：搜索行业�
 
 #### 聚合与非聚合数据
 
-有一种流行的观点认为，为了有效地计算统计数据，您必须聚合数据，因为这会减少数据量。 
+有一种流行的观点认为，为了有效地计算统计数据，您必须聚合数据，因为这会减少数据量。
 
 但是数据聚合是一个非常有限的解决方案，原因如下：
 
@@ -234,35 +233,31 @@ Yandex.Metrica 有一个称为 Metrage 的专门的系统来聚合数据，它�
 
 与 map-reduce 类似的系统可以在集群上运行任何代码。但是对于 OLAP 用例，声明式查询语言更适合，因为它们允许更快地进行搜索。例如，Hadoop 有 Hive 和 Pig。还有其他的：Cloudera Impala，Shark（已弃用）和 Spark SQL for Spark，Presto，Apache Drill。然而，与专门系统的性能相比，这些任务的性能是非常不理想的，相对较高的延迟不允许将这些系统用作网络接口的后端。
 
-YT allows you to store separate groups of columns. But YT is not a truly columnar storage system, as the system has no fixed length data types \(so you can efficiently store a number without “garbage”\), and there is no vector engine. Tasks in YT are performed by arbitrary code in streaming mode, so can not be sufficiently optimized \(up to hundreds of millions of lines per second per server\). In 2014-2016 YT is to develop “dynamic table sorting” functionality using Merge Tree, strongly typed values ​​and SQL-like language support. Dynamically sorted tables are not suited for OLAP tasks, since the data is stored in rows. Query language development in YT is still in incubating phase, which does not allow it to focus on this functionality. YT developers are considering dynamically sorted tables for use in OLTP and Key-Value scenarios.
+YT 允许您存储单独的一组列。但 YT 不是一个真正的列式存储系统，因为系统没有固定长度的数据类型（所以你可以有效地存储一个数字而不是“垃圾”），而且没有矢量引擎。 YT 中的任务由流模式下的任意代码执行，因此无法进行充分优化（每台服务器每秒高达数亿行）。在 2014-2016 年，YT 将开发使用 Merge Tree，强类型值和类 SQL 语言支持的“动态表排序”功能。动态排序的表不适用于OLAP 任务，因为数据存储在行中。 YT 中的查询语言开发仍处于孵化阶段，导致它不能专注于这个功能。 YT 开发者正在考虑在OLTP 和 Key-Value 场景中使用动态排序的表。
 
-YT允许您存储单独的一组列。但YT不是一个真正的柱状存储系统，因为系统没有固定长度的数据类型（所以你可以有效地存储一个数字而不是“垃圾”），而且没有矢量引擎。 YT中的任务由流模式下的任意代码执行，因此无法进行充分优化（每台服务器每秒高达数亿行）。在2014-2016年，YT将开发使用合并树，强类型值和类SQL语言支持的“动态表格排序”功能。动态排序的表不适用于OLAP任务，因为数据存储在行中。 YT中的查询语言开发仍处于孵化阶段，不能专注于这个功能。 YT开发者正在考虑在OLTP和Key-Value场景中使用动态排序的表。
+### 性能
 
-### Performance
+根据内部测试结果，ClickHouse 在可用于测试的同类系统中显示出最佳性能。这包括长查询的最高吞吐量和短查询的最低延迟。测试结果显示在此页面上。
 
-According to internal testing results, ClickHouse shows the best performance for comparable operating scenarios among systems of its class that were available for testing. This includes the highest throughput for long queries, and the lowest latency on short queries. Testing results are shown on this page.
+#### 单个大型查询的吞吐量
 
-#### Throughput for a single large query
+吞吐量可以以每秒行数或兆字节每秒来衡量。如果数据放置在页面缓存（page cache）中，则在现代硬件上运行的一个不太复杂的查询，在单个服务器上以大约 2-10 GB/s 的未压缩数据的速度进行处理（对于最简单的情况，速度可能会达到 30 GB/s）。如果数据不在页面缓存中，则速度取决于磁盘子系统和数据压缩率。例如，如果磁盘子系统允许以 400 MB/s 读取数据，并且数据压缩率为3，则速度将在 1.2 GB/s 左右。要获得每秒行数的速度，请将查询中使用的列的总大小除以每秒字节数。例如，如果提取 10 个字节的列，速度将在每秒大约1到2亿行。 
 
-Throughput can be measured in rows per second or in megabytes per second. If the data is placed in the page cache, a query that is not too complex is processed on modern hardware at a speed of approximately 2-10 GB/s of uncompressed data on a single server \(for the simplest cases, the speed may reach 30 GB/s\). If data is not placed in the page cache, the speed depends on the disk subsystem and the data compression rate. For example, if the disk subsystem allows reading data at 400 MB/s, and the data compression rate is 3, the speed will be around 1.2 GB/s. To get the speed in rows per second, divide the speed in bytes per second by the total size of the columns used in the query. For example, if 10 bytes of columns are extracted, the speed will be around 100-200 million rows per second.
+处理速度对于分布式处理几乎线性地增加，但是只有在聚合或排序产生的行数不太大的情况下。
 
-The processing speed increases almost linearly for distributed processing, but only if the number of rows resulting from aggregation or sorting is not too large.
+#### 处理短查询时的延迟
 
-#### Latency when processing short queries
+如果一个查询使用一个主键，并且没有选择太多的行来处理（成千上万），并且不使用太多的列，如果数据被放置在页面缓存中，我们可以预计不到50毫秒的延迟（最好的情况下，单位为毫秒）。否则，延迟是根据搜索的数量来计算的。如果使用旋转驱动器，对于没有过载的系统，延迟时间通过以下公式计算：查找时间（10 ms）\* 查询的列数 \* 数据部分的数量（number of data parts）。
 
-If a query uses a primary key and does not select too many rows to process \(hundreds of thousands\), and does not use too many columns, we can expect less than 50 milliseconds of latency \(single digits of milliseconds in the best case\) if data is placed in the page cache. Otherwise, latency is calculated from the number of seeks. If you use rotating drives, for a system that is not overloaded, the latency is calculated by this formula: seek time \(10 ms\) \* number of columns queried \* number of data parts.
+#### 处理大量短查询时的吞吐量
 
-#### Throughput when processing a large quantity of short queries
+在相同的条件下，ClickHouse 可以在单个服务器上每秒处理几百个查询（在最好的情况下可以达到几千个）。由于这种情况对于分析DBMS 并不典型，因此我们建议每秒最多可以查询100个查询。
 
-Under the same conditions, ClickHouse can handle several hundred queries per second on a single server \(up to several thousand in the best case\). Since this scenario is not typical for analytical DBMSs, we recommend expecting a maximum of 100 queries per second.
+#### 数据插入性能
 
-#### Performance on data insertion
+我们建议插入数据时，至少1000行/数据包，或者每秒不超过一个请求。从 tab 分隔转储插入到 MergeTree 表时，插入速度将从50到200 MB/s。如果插入的行大小约为1Kb，速度将从每秒 50,000 到 200,000 行。如果行很小，则每秒行数的性能表现会更高（Yandex Banner System数据 - &gt; 500,000行/秒，Graphite数据 -&gt; 1,000,000行/秒）。为了提高性能，可以并行执行多个 `INSERT` 查询，并且性能会线性增加。
 
-We recommend inserting data in packets of at least 1000 rows, or no more than a single request per second. When inserting to a MergeTree table from a tab-separated dump, the insertion speed will be from 50 to 200 MB/s. If the inserted rows are around 1 Kb in size, the speed will be from 50,000 to 200,000 rows per second. If the rows are small, the performance will be higher in rows per second \(on Yandex Banner System data -&gt; 500,000 rows per second, on Graphite data -&gt; 1,000,000 rows per second\). To improve performance, you can make multiple INSERT queries in parallel, and performance will increase linearly.  
-
-
-  
-
+## Getting started 入门
 
 
 
