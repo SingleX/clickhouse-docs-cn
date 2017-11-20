@@ -109,9 +109,8 @@ LIMIT 20
 
 有两种方法可以做到这一点：
 
-1. A vector engine. All operations are written for vectors, instead of for separate values. This means you don’t need to call operations very often, and dispatching costs are negligible. Operation code contains an optimized internal cycle.
-2. 一个向量引擎。所有的操作都是为向量而写的，而不是单独的值。这意味着你不需要经常调用操作，并且调度成本可以忽略不计。操作代码包含一个优化的内部循环。
-3. Code generation. The code generated for the query has all the indirect calls in it.
+1. 一个向量引擎。所有的操作都是为向量而写的，而不是单独的值。这意味着你不需要经常调用操作，并且调度成本可以忽略不计。操作代码包含一个优化的内部循环。
+2. Code generation. The code generated for the query has all the indirect calls in it.
 
 This is not done in “normal” databases, because it doesn’t make sense when running simple queries. However, there are exceptions. For example, MemSQL uses code generation to reduce latency when processing SQL queries. \(For comparison, analytical DBMSs require optimization of throughput, not latency.\)
 
