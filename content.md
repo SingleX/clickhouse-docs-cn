@@ -105,14 +105,13 @@ LIMIT 20
 
 1. CPU 方面
 
-Since executing a query requires processing a large number of rows, it helps to dispatch all operations for entire vectors instead of for separate rows, or to implement the query engine so that there is almost no dispatching cost. If you don’t do this, with any half-decent disk subsystem, the query interpreter inevitably stalls the CPU. It makes sense to both store data in columns and process it, when possible, by columns.
+既然执行一次查询需要处理大量的行，它有助于调度整个向量的所有操作，而不是单独的行，或者实现查询引擎那样就几乎没有调度成本了。如果不这样做，对任何像样的磁盘子系统，查询解释器必将拖慢 CPU。将数据列式存储并在可能的情况下按列处理它是有意义的。
 
-既然执行一次查询需要处理大量的行，它有助于调度整个向量的所有操作，而不是单独的行，或者实现查询引擎那样就几乎没有调度成本了。
-
-There are two ways to do this:
+有两种方法可以做到这一点：
 
 1. A vector engine. All operations are written for vectors, instead of for separate values. This means you don’t need to call operations very often, and dispatching costs are negligible. Operation code contains an optimized internal cycle.
-2. Code generation. The code generated for the query has all the indirect calls in it.
+2. 一个向量引擎。所有的操作都是为向量而写的，而不是单独的值。这意味着你不需要经常调用操作，并且调度成本可以忽略不计。操作代码包含一个优化的内部循环。
+3. Code generation. The code generated for the query has all the indirect calls in it.
 
 This is not done in “normal” databases, because it doesn’t make sense when running simple queries. However, there are exceptions. For example, MemSQL uses code generation to reduce latency when processing SQL queries. \(For comparison, analytical DBMSs require optimization of throughput, not latency.\)
 
