@@ -255,7 +255,373 @@ YT 允许您存储单独的一组列。但 YT 不是一个真正的列式存储�
 
 我们建议插入数据时，至少1000行/数据包，或者每秒不超过一个请求。从 tab 分隔转储插入到 MergeTree 表时，插入速度将从50到200 MB/s。如果插入的行大小约为1Kb，速度将从每秒 50,000 到 200,000 行。如果行很小，则每秒行数的性能表现会更高（Yandex Banner System数据 - &gt; 500,000行/秒，Graphite数据 -&gt; 1,000,000行/秒）。为了提高性能，可以并行执行多个 `INSERT` 查询，并且性能会线性增加。
 
-## Getting started 入门
+## 入门
+
+### 系统要求
+
+这不是一个跨平台的系统。它需要 Linux Ubuntu Precise（12.04）或更新的x86\_64体系结构和 SSE 4.2指令集。要测试SSE 4.2支持，请执行以下操作
+
+```
+grep -q sse4_2 /proc/cpuinfo && echo "SSE 4.2 supported" || echo "SSE 4.2 not supported"
+```
+
+我们推荐使用 Ubuntu Trusty 或 Ubuntu Xenial 或 Ubuntu Precise。终端必须使用 UTF-8 编码（在Ubuntu中是默认的）。
+
+### 安装
+
+对于测试和开发，系统可以安装在单台服务器或台式计算机上。
+
+#### 软件包安装
+
+在 `/etc/apt/sources.list`\(或者在一个独立的 `/etc/apt/sources.list.d/clickhouse.list` 文件中\), 添加仓库:
+
+```
+deb http://repo.yandex.ru/clickhouse/trusty stable main
+```
+
+对于其他 Ubuntu 版本，请替换 `trusty` 为 `xenial` 或 `precise`。如果想使用最新的测试版 ClickHouse，请更换 `stable` 为 `testing`。 
+
+然后运行：
+
+```
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4    # optional
+sudo apt-get update
+sudo apt-get install clickhouse-client clickhouse-server-common
+```
+
+您也可以从这里手动下载和安装软件包：
+
+* [http://repo.yandex.ru/clickhouse/trusty/pool/main/c/clickhouse/](http://repo.yandex.ru/clickhouse/trusty/pool/main/c/clickhouse/)，
+* [http://repo.yandex.ru/clickhouse/xenial/pool/main/c/clickhouse/](http://repo.yandex.ru/clickhouse/xenial/pool/main/c/clickhouse/)，
+* [http://repo.yandex.ru/clickhouse/precise/pool/main/c/clickhouse/](http://repo.yandex.ru/clickhouse/precise/pool/main/c/clickhouse/)
+
+ClickHouse 包含访问限制设置。它们位于 `users.xml` 文件（`config.xml` 旁边）。默认情况下，默认用户无需密码即可访问。请参阅“用户/默认/网络”。有关更多信息，请参阅“配置文件”一节。
+
+#### 源码安装
+
+构建时，请按照 build.md（适用于Linux）或 build\_osx.md（适用于Mac OS X）中的说明进行操作。 
+
+你可以编译软件包并安装它们。您也可以使用程序而不安装软件包。
+
+```
+Client: dbms/src/Client/
+Server: dbms/src/Server/
+```
+
+对于服务端，创建一个数据目录，比如：
+
+```
+/opt/clickhouse/data/default/
+/opt/clickhouse/metadata/default/
+```
+
+（在服务端配置中配置）为所需用户运行“chown”。
+
+注意 Server 配置文件中的 log 文件路径 \(`src/dbms/src/Server/config.xml`\).
+
+#### 其他安装方法
+
+Docker image：[https://hub.docker.com/r/yandex/clickhouse-server/](https://hub.docker.com/r/yandex/clickhouse-server/)
+
+RPM 包，for CentOS, RHEL：[https://github.com/Altinity/clickhouse-rpm-install](https://github.com/Altinity/clickhouse-rpm-install)
+
+Gentoo overlay：[https://github.com/kmeaw/clickhouse-overlay](https://github.com/kmeaw/clickhouse-overlay)
+
+### 启动
+
+启动服务器 \(as a daemon\)，运行：
+
+```
+sudo service clickhouse-server start
+```
+
+可以在目录 `/var/log/clickhouse-server/` 查看日志文件
+
+如果服务器没有启动，请检查 `/etc/clickhouse-server/config.xml` 文件中的配置 
+
+您也可以从控制台启动服务器：
+
+```
+clickhouse-server --config-file=/etc/clickhouse-server/config.xml
+```
+
+在这种情况下，日志将被打印到控制台，这在开发过程中很方便。如果配置文件位于当前目录中，则不需要指定 `--config-file` 参数。默认情况下，它使用 `./config.xml` 。
+
+您可以使用命令行客户端连接到服务器：
+
+```
+clickhouse-client
+```
+
+默认参数表示使用用户“default”，无需密码即可连接 localhost:9000。客户端可以用于连接到远程服务器。例如：
+
+```
+clickhouse-client --host=example.com
+```
+
+有关更多信息，请参阅“命令行客户端”一节。 
+
+检查系统：
+
+```
+milovidov@hostname:~/work/metrica/src/dbms/src/Client$ ./clickhouse-client
+ClickHouse client version 0.0.18749.
+Connecting to localhost:9000.
+Connected to ClickHouse server version 0.0.18749.
+
+:) SELECT 1
+
+SELECT 1
+
+┌─1─┐
+│ 1 │
+└───┘
+
+1 rows in set. Elapsed: 0.003 sec.
+
+:)
+```
+
+恭喜，它工作了！
+
+对于进一步的实验，您可以尝试使用以下示例数据集之一进行：
+
+#### AMPLab Big Data Benchmark
+
+参见：[https://amplab.cs.berkeley.edu/benchmark/](https://amplab.cs.berkeley.edu/benchmark/)
+
+在 [https://aws.amazon.com](https://aws.amazon.com/) 注册免费账号 —— 你将需要信用卡，email，电话号码来创建新的 access key ：[https://console.aws.amazon.com/iam/home?nc2=h\_m\_sc\#security\_credential](https://console.aws.amazon.com/iam/home?nc2=h_m_sc#security_credential)
+
+在 shell 中执行：
+
+```
+sudo apt-get install s3cmd
+mkdir tiny; cd tiny;
+s3cmd sync s3://big-data-benchmark/pavlo/text-deflate/tiny/ .
+cd ..
+mkdir 1node; cd 1node;
+s3cmd sync s3://big-data-benchmark/pavlo/text-deflate/1node/ .
+cd ..
+mkdir 5nodes; cd 5nodes;
+s3cmd sync s3://big-data-benchmark/pavlo/text-deflate/5nodes/ .
+cd ..
+```
+
+执行这些 ClickHouse 查询：
+
+```
+CREATE TABLE rankings_tiny
+(
+    pageURL String,
+    pageRank UInt32,
+    avgDuration UInt32
+) ENGINE = Log;
+
+CREATE TABLE uservisits_tiny
+(
+    sourceIP String,
+    destinationURL String,
+    visitDate Date,
+    adRevenue Float32,
+    UserAgent String,
+    cCode FixedString(3),
+    lCode FixedString(6),
+    searchWord String,
+    duration UInt32
+) ENGINE = MergeTree(visitDate, visitDate, 8192);
+
+CREATE TABLE rankings_1node
+(
+    pageURL String,
+    pageRank UInt32,
+    avgDuration UInt32
+) ENGINE = Log;
+
+CREATE TABLE uservisits_1node
+(
+    sourceIP String,
+    destinationURL String,
+    visitDate Date,
+    adRevenue Float32,
+    UserAgent String,
+    cCode FixedString(3),
+    lCode FixedString(6),
+    searchWord String,
+    duration UInt32
+) ENGINE = MergeTree(visitDate, visitDate, 8192);
+
+CREATE TABLE rankings_5nodes_on_single
+(
+    pageURL String,
+    pageRank UInt32,
+    avgDuration UInt32
+) ENGINE = Log;
+
+CREATE TABLE uservisits_5nodes_on_single
+(
+    sourceIP String,
+    destinationURL String,
+    visitDate Date,
+    adRevenue Float32,
+    UserAgent String,
+    cCode FixedString(3),
+    lCode FixedString(6),
+    searchWord String,
+    duration UInt32
+) ENGINE = MergeTree(visitDate, visitDate, 8192);
+```
+
+返回到 shell：
+
+```
+for i in tiny/rankings/*.deflate; do echo $i; zlib-flate -uncompress < $i | clickhouse-client --host=example-perftest01j --query="INSERT INTO rankings_tiny FORMAT CSV"; done
+for i in tiny/uservisits/*.deflate; do echo $i; zlib-flate -uncompress < $i | clickhouse-client --host=example-perftest01j --query="INSERT INTO uservisits_tiny FORMAT CSV"; done
+for i in 1node/rankings/*.deflate; do echo $i; zlib-flate -uncompress < $i | clickhouse-client --host=example-perftest01j --query="INSERT INTO rankings_1node FORMAT CSV"; done
+for i in 1node/uservisits/*.deflate; do echo $i; zlib-flate -uncompress < $i | clickhouse-client --host=example-perftest01j --query="INSERT INTO uservisits_1node FORMAT CSV"; done
+for i in 5nodes/rankings/*.deflate; do echo $i; zlib-flate -uncompress < $i | clickhouse-client --host=example-perftest01j --query="INSERT INTO rankings_5nodes_on_single FORMAT CSV"; done
+for i in 5nodes/uservisits/*.deflate; do echo $i; zlib-flate -uncompress < $i | clickhouse-client --host=example-perftest01j --query="INSERT INTO uservisits_5nodes_on_single FORMAT CSV"; done
+```
+
+数据检索查询：
+
+```
+SELECT pageURL, pageRank FROM rankings_1node WHERE pageRank > 1000
+
+SELECT substring(sourceIP, 1, 8), sum(adRevenue) FROM uservisits_1node GROUP BY substring(sourceIP, 1, 8)
+
+SELECT
+    sourceIP,
+    sum(adRevenue) AS totalRevenue,
+    avg(pageRank) AS pageRank
+FROM rankings_1node ALL INNER JOIN
+(
+    SELECT
+        sourceIP,
+        destinationURL AS pageURL,
+        adRevenue
+    FROM uservisits_1node
+    WHERE (visitDate > '1980-01-01') AND (visitDate < '1980-04-01')
+) USING pageURL
+GROUP BY sourceIP
+ORDER BY totalRevenue DESC
+LIMIT 1
+```
+
+#### Criteo Terabyte Click Logs
+
+可从以下网址下载全部数据：[http://labs.criteo.com/downloads/download-terabyte-click-logs/](http://labs.criteo.com/downloads/download-terabyte-click-logs/)
+
+创建 log 表：
+
+```
+CREATE TABLE criteo_log (date Date, clicked UInt8, int1 Int32, int2 Int32, int3 Int32, int4 Int32, int5 Int32, int6 Int32, int7 Int32, int8 Int32, int9 Int32, int10 Int32, int11 Int32, int12 Int32, int13 Int32, cat1 String, cat2 String, cat3 String, cat4 String, cat5 String, cat6 String, cat7 String, cat8 String, cat9 String, cat10 String, cat11 String, cat12 String, cat13 String, cat14 String, cat15 String, cat16 String, cat17 String, cat18 String, cat19 String, cat20 String, cat21 String, cat22 String, cat23 String, cat24 String, cat25 String, cat26 String) ENGINE = Log
+```
+
+加载数据：
+
+```
+for i in {00..23}; do echo $i; zcat datasets/criteo/day_${i#0}.gz | sed -r 's/^/2000-01-'${i/00/24}'\t/' | clickhouse-client --host=example-perftest01j --query="INSERT INTO criteo_log FORMAT TabSeparated"; done
+```
+
+为转换的数据创建表：
+
+```
+CREATE TABLE criteo
+(
+    date Date,
+    clicked UInt8,
+    int1 Int32,
+    int2 Int32,
+    int3 Int32,
+    int4 Int32,
+    int5 Int32,
+    int6 Int32,
+    int7 Int32,
+    int8 Int32,
+    int9 Int32,
+    int10 Int32,
+    int11 Int32,
+    int12 Int32,
+    int13 Int32,
+    icat1 UInt32,
+    icat2 UInt32,
+    icat3 UInt32,
+    icat4 UInt32,
+    icat5 UInt32,
+    icat6 UInt32,
+    icat7 UInt32,
+    icat8 UInt32,
+    icat9 UInt32,
+    icat10 UInt32,
+    icat11 UInt32,
+    icat12 UInt32,
+    icat13 UInt32,
+    icat14 UInt32,
+    icat15 UInt32,
+    icat16 UInt32,
+    icat17 UInt32,
+    icat18 UInt32,
+    icat19 UInt32,
+    icat20 UInt32,
+    icat21 UInt32,
+    icat22 UInt32,
+    icat23 UInt32,
+    icat24 UInt32,
+    icat25 UInt32,
+    icat26 UInt32
+) ENGINE = MergeTree(date, intHash32(icat1), (date, intHash32(icat1)), 8192)
+```
+
+解析来自原始日志的数据并将其放入第二个表中：
+
+```
+INSERT INTO criteo SELECT date, clicked, int1, int2, int3, int4, int5, int6, int7, int8, int9, int10, int11, int12, int13, reinterpretAsUInt32(unhex(cat1)) AS icat1, reinterpretAsUInt32(unhex(cat2)) AS icat2, reinterpretAsUInt32(unhex(cat3)) AS icat3, reinterpretAsUInt32(unhex(cat4)) AS icat4, reinterpretAsUInt32(unhex(cat5)) AS icat5, reinterpretAsUInt32(unhex(cat6)) AS icat6, reinterpretAsUInt32(unhex(cat7)) AS icat7, reinterpretAsUInt32(unhex(cat8)) AS icat8, reinterpretAsUInt32(unhex(cat9)) AS icat9, reinterpretAsUInt32(unhex(cat10)) AS icat10, reinterpretAsUInt32(unhex(cat11)) AS icat11, reinterpretAsUInt32(unhex(cat12)) AS icat12, reinterpretAsUInt32(unhex(cat13)) AS icat13, reinterpretAsUInt32(unhex(cat14)) AS icat14, reinterpretAsUInt32(unhex(cat15)) AS icat15, reinterpretAsUInt32(unhex(cat16)) AS icat16, reinterpretAsUInt32(unhex(cat17)) AS icat17, reinterpretAsUInt32(unhex(cat18)) AS icat18, reinterpretAsUInt32(unhex(cat19)) AS icat19, reinterpretAsUInt32(unhex(cat20)) AS icat20, reinterpretAsUInt32(unhex(cat21)) AS icat21, reinterpretAsUInt32(unhex(cat22)) AS icat22, reinterpretAsUInt32(unhex(cat23)) AS icat23, reinterpretAsUInt32(unhex(cat24)) AS icat24, reinterpretAsUInt32(unhex(cat25)) AS icat25, reinterpretAsUInt32(unhex(cat26)) AS icat26 FROM criteo_log;
+
+DROP TABLE criteo_log;
+```
+
+#### NYC Taxi Dataset
+
+如何从原始数据创建数据集
+
+从 [https://github.com/toddwschneider/nyc-taxi-data](https://github.com/toddwschneider/nyc-taxi-data) 和 [http://tech.marksblogg.com/billion-nyc-taxi-rides-redshift.html](http://tech.marksblogg.com/billion-nyc-taxi-rides-redshift.html) 查看数据集和加载指令的描述。
+
+数据将下载到约 227 GB的未压缩的CSV文件。 1GB 连接大约需要一个小时。（从 s3.amazonaws.com 并行下载至少一个千兆的一半。）有些文件可能不完整地下载。看看可疑的文件大小，并重复下载不完整的文件。
+
+某些文件包含损坏的行。要更正它们，请运行：
+
+```
+sed -E '/(.*,){18,}/d' data/yellow_tripdata_2010-02.csv > data/yellow_tripdata_2010-02.csv_
+sed -E '/(.*,){18,}/d' data/yellow_tripdata_2010-03.csv > data/yellow_tripdata_2010-03.csv_
+mv data/yellow_tripdata_2010-02.csv_ data/yellow_tripdata_2010-02.csv
+mv data/yellow_tripdata_2010-03.csv_ data/yellow_tripdata_2010-03.csv
+```
+
+那么数据必须在 PostgreSQL 里预处理。它将做多边形点查找（地图指向纽约地区），最后将所有数据 JOIN 到单个非标准化的水平的表。您必须安装支持 PostGIS 的 PostgreSQL。
+
+运行 `initialize_database.sh`时，请小心并手动检查，以确保所有表成功创建。
+
+在 PostgreSQL里处理每个月的黄色出租车数据大概需要 20-30 分钟，总共大约需要48小时。 
+
+检查加载行的确切数量：
+
+```
+time psql nyc-taxi-data -c "SELECT count(*) FROM trips;"
+   count
+------------
+ 1298979494
+(1 row)
+
+real    7m9.164s
+```
+
+\(this is slightly more than 1.1 billion rows reported by Mark Litwintschik in a series of blog posts\)
+
+Data in PostgreSQL takes 370 GB \(346 GiB\).
+
+Export data from PostgreSQL:
+
+
 
 
 
