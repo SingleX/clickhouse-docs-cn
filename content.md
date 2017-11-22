@@ -615,9 +615,9 @@ time psql nyc-taxi-data -c "SELECT count(*) FROM trips;"
 real    7m9.164s
 ```
 
-（这是 Mark Litwintschik 在一系列博客文章中报告的略多于11亿行） 
+（这是 Mark Litwintschik 在一系列博客文章中报告的略多于11亿行）
 
-PostgreSQL 中的数据需要370 GB（346 GiB）。 
+PostgreSQL 中的数据需要370 GB（346 GiB）。
 
 从PostgreSQL 导出数据：
 
@@ -691,7 +691,7 @@ COPY
 ) TO '/opt/milovidov/nyc-taxi-data/trips.tsv';
 ```
 
-转储速度约为50 MB /秒。在创建转储时，PostgreSQL 以大约 28 MB/s 的速度从磁盘读取数据。大约需要5个小时。生成的 tsv 文件是 590612904969字节。 
+转储速度约为50 MB /秒。在创建转储时，PostgreSQL 以大约 28 MB/s 的速度从磁盘读取数据。大约需要5个小时。生成的 tsv 文件是 590612904969字节。
 
 在 ClickHouse 中创建临时表：
 
@@ -764,7 +764,7 @@ real    75m56.214s
 
 （你也可以直接从 Postgres 导入数据，使用`COPY...TO PROGRAM`）
 
-可悲的是，所有天气相关的字段（precipitation... average\_wind\_speed）都是 NULL。我们将从最终数据集中省略它们。 
+可悲的是，所有天气相关的字段（precipitation... average\_wind\_speed）都是 NULL。我们将从最终数据集中省略它们。
 
 第一次，我们将在单个服务器上创建一个表。稍后我们将分发这个表。创建并填充最终的表：
 
@@ -830,7 +830,7 @@ toUInt16(ifNull(dropoff_puma, '0')) AS dropoff_puma
 FROM trips
 ```
 
-这在 3030s 内以约 428000行/s 完成。如果你想要更快的加载时间，你可以使用 `Log` 引擎而不是 `MergeTree` 来创建表。在这种情况下，加载低于 200s。 
+这在 3030s 内以约 428000行/s 完成。如果你想要更快的加载时间，你可以使用 `Log` 引擎而不是 `MergeTree` 来创建表。在这种情况下，加载低于 200s。
 
 表使用了126GB 的磁盘空间。
 
@@ -846,9 +846,9 @@ WHERE (table = 'trips_mergetree') AND active
 └────────────────────────────────┘
 ```
 
-顺便说一句，你可以为 MergeTree 表运行 OPTIMIZE。但这不是必要的，一切都会好起来的。 
+顺便说一句，你可以为 MergeTree 表运行 OPTIMIZE。但这不是必要的，一切都会好起来的。
 
-在单个服务器上的结果 
+在单个服务器上的结果
 
 Q1：
 
@@ -885,13 +885,13 @@ ORDER BY year, count(*) DESC
 
 3.593 sec.
 
-服务器是： 
+服务器是：
 
-Two-socket Intel\(R\) Xeon\(R\) CPU E5-2650 v2 @ 2.60GHz，总共16个物理内核，128 GB RAM，RAID-5级别的8x6 TB硬盘 
+Two-socket Intel\(R\) Xeon\(R\) CPU E5-2650 v2 @ 2.60GHz，总共16个物理内核，128 GB RAM，RAID-5级别的8x6 TB硬盘
 
 查询时间是三次运行中最好的。实际上，从第二次运行开始，查询将从 OS 页面缓存中读取数据。不会发生进一步的缓存：在每次运行中读取和处理数据。
 
-在有 3个服务器的群集上创建表 
+在有 3个服务器的群集上创建表
 
 在每台服务器上：
 
@@ -925,41 +925,18 @@ Q1: 0.028 sec. Q2: 0.043 sec. Q3: 0.051 sec. Q4: 0.072 sec.
 
 In that case, query execution speed is dominated by latency. We do queries from client located in Yandex datacenter in Mäntsälä \(Finland\) to cluster somewhere in Russia, that adds at least 20 ms of latency.
 
-##### Summary
+在这种情况下，查询执行速度主要受延迟的影响。我们从位于芬兰 Mäntsälä 的 Yandex 数据中心的客户端至俄罗斯某个地方的集群进行查询，至少增加了20毫秒的延迟时间。
 
+总结
 
+```
+nodes   Q1     Q2     Q3     Q4
+  1  0.490  1.224  2.104  3.593
+  3  0.212  0.438  0.733  1.241
+140  0.028  0.043  0.051  0.072
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#### OnTime
 
 
 
